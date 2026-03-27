@@ -1,6 +1,6 @@
 # img2map
 
-A program for converting an image part into HTML map poly points
+A program for converting an image map into HTML map poly points
 
 ## How to run
 
