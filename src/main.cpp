@@ -12,7 +12,7 @@
 
 struct Point
 {
-    int x, y;
+    int x = 0, y = 0;
 
     bool operator<(const Point& other) const { return x < other.x || y < other.y; }
     bool operator==(const Point& other) const { return x == other.x && y == other.y; }
@@ -34,7 +34,7 @@ static int HexToDec(const std::string& hex)
 
 struct Color
 {
-    unsigned char r, g, b;
+    unsigned char r = 255, g = 255, b = 255;
 
     bool operator==(const Color& other) const
     {
@@ -200,9 +200,13 @@ int main(int argc, char* argv[])
             if (Color{pixel[0], pixel[1], pixel[2]} == maskColor)
             {
                 points.push_back({x, y});
-                pixel[0] = 255;
-                pixel[1] = 0;
-                pixel[2] = 0;
+
+                if (output)
+                {
+                    pixel[0] = 255;
+                    pixel[1] = 0;
+                    pixel[2] = 0;
+                }
             }
         }
     }
@@ -210,25 +214,32 @@ int main(int argc, char* argv[])
     printf("Found %zu border points:\n", borderPoints.size());
     for (auto& point: borderPoints)
     {
-        unsigned char* pixel = data + (point.y * w + point.x) * n;
-        pixel[0] = 0;
-        pixel[1] = 0;
-        pixel[2] = 255;
+        if (output)
+        {
+            unsigned char* pixel = data + (point.y * w + point.x) * n;
+            pixel[0] = 0;
+            pixel[1] = 0;
+            pixel[2] = 255;
+        }
 
         printf("%d,%d,", point.x, point.y);
     }
 
-    std::ofstream file(std::string(output) + ".ppm");
-    file << "P3\n" << w << ' ' << h << "\n255\n";
-    for (int y = 0; y < h; y++)
+    if (output)
     {
-        for (int x = 0; x < w; x++)
+        std::ofstream file(std::string(output) + ".ppm");
+        file << "P3\n" << w << ' ' << h << "\n255\n";
+        for (int y = 0; y < h; y++)
         {
-            file << (unsigned int)data[(y * w + x) * n + 0] << ' '
-                 << (unsigned int)data[(y * w + x) * n + 1] << ' '
-                 << (unsigned int)data[(y * w + x) * n + 2] << '\n';
+            for (int x = 0; x < w; x++)
+            {
+                file << (unsigned int)data[(y * w + x) * n + 0] << ' '
+                     << (unsigned int)data[(y * w + x) * n + 1] << ' '
+                     << (unsigned int)data[(y * w + x) * n + 2] << '\n';
+            }
         }
     }
+
     stbi_image_free(data);
 
     return 0;
