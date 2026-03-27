@@ -50,7 +50,7 @@ memory_leak_build() {
 }
 
 while [[ $# -gt 0 ]]; do
-    if [ "$found_args" = true ]; then args+="$1"; shift; continue; fi
+    if [ "$found_args" = true ]; then args+=" $1"; shift; continue; fi
     
     case "$1" in
         --*) # Handle long flags
@@ -92,7 +92,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 clear
-cmake -B "$build_dir" -DCMAKE_build_type="$build_type" $cmake_flags
+cmake -B "$build_dir" -DCMAKE_BUILD_TYPE="$build_type" $cmake_flags
 cmake --build "$build_dir" -j$(nproc)
 
 binary_path="./$build_dir/bin/$executable_name"
