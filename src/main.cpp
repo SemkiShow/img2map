@@ -185,11 +185,11 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    printf("Mask color: %d %d %d\n", maskColor.r, maskColor.g, maskColor.b);
+    fprintf(stderr, "Mask color: %d %d %d\n", maskColor.r, maskColor.g, maskColor.b);
 
     int w, h, n;
     unsigned char* data = stbi_load(input, &w, &h, &n, 0);
-    printf("There are %d channels in the file\n", n);
+    fprintf(stderr, "There are %d channels in the file\n", n);
 
     std::vector<Point> points;
     for (int y = 0; y < h; y++)
@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
         }
     }
     auto borderPoints = GetBorderPoints(points, 1, stepSize);
-    printf("Found %zu border points:\n", borderPoints.size());
+    fprintf(stderr, "Found %zu border points:\n", borderPoints.size());
     for (auto& point: borderPoints)
     {
         if (output)
