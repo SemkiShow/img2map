@@ -140,7 +140,7 @@ static void PrintHelp(char* programName)
     printf("\n");
     printf("-h, --help    Print help\n");
     printf("-i            Provide an input image (required)\n");
-    printf("-o            Provide the output path (.ppm will be appended to the input) (no output by default)\n");
+    printf("-o            Provide the output path (.ppm will be appended)\n");
     printf("-c            Provide the mask color as #rrggbb (the default value is #ffffff)\n");
     printf("-s            Provide the step size (the default value is 5)\n");
 }
@@ -189,6 +189,11 @@ int main(int argc, char* argv[])
 
     int w, h, n;
     unsigned char* data = stbi_load(input, &w, &h, &n, 0);
+    if (!data)
+    {
+        fprintf(stderr, "Error: failed to open file %s!\n", input);
+        return 1;
+    }
     fprintf(stderr, "There are %d channels in the file\n", n);
 
     std::vector<Point> points;
@@ -211,7 +216,7 @@ int main(int argc, char* argv[])
         }
     }
     auto borderPoints = GetBorderPoints(points, 1, stepSize);
-    fprintf(stderr, "Found %zu border points:\n", borderPoints.size());
+    fprintf(stderr, "Found %zu border points\n", borderPoints.size());
     for (auto& point: borderPoints)
     {
         if (output)
