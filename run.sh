@@ -78,7 +78,6 @@ while [[ $# -gt 0 ]]; do
                     w) windows_build ;;
                     p) profile_build ;;
                     m) memory_leak_build ;;
-                    M) mods_build ;;
                     *) echo "Unknown flag: -$char"; print_help ;;
                 esac
             done

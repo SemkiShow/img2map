@@ -139,10 +139,10 @@ static void PrintHelp(char* programName)
     printf("Convert a pixel mask into a polygon\n");
     printf("\n");
     printf("-h, --help    Print help\n");
-    printf("-i            Provide an input image\n");
-    printf("-o            Provide the output path (.ppm will be appended to the input)\n");
-    printf("-c            Provide the mask color as #rrggbb\n");
-    printf("-s            Provide the step size\n");
+    printf("-i            Provide an input image (required)\n");
+    printf("-o            Provide the output path (.ppm will be appended to the input) (no output by default)\n");
+    printf("-c            Provide the mask color as #rrggbb (the default value is #ffffff)\n");
+    printf("-s            Provide the step size (the default value is 5)\n");
 }
 
 int main(int argc, char* argv[])
