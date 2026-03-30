@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -21,13 +22,15 @@ struct Point
 
 static int HexToDec(const std::string& hex)
 {
+    constexpr int HEX = 16;
+    constexpr int LETTER_OFFSET = 10;
     int out = 0;
-    for (auto& c: hex)
+    for (const auto& c: hex)
     {
-        out *= 16;
+        out *= HEX;
         if (c >= '0' && c <= '9') out += c - '0';
-        if (c >= 'A' && c <= 'Z') out += c - 'A' + 10;
-        if (c >= 'a' && c <= 'z') out += c - 'a' + 10;
+        if (c >= 'A' && c <= 'Z') out += c - 'A' + LETTER_OFFSET;
+        if (c >= 'a' && c <= 'z') out += c - 'a' + LETTER_OFFSET;
     }
     return out;
 }
@@ -45,15 +48,21 @@ struct Color
     {
         Color color;
 
-        if (hex.size() < 7)
+        constexpr int HEX_LEN = 7;
+        if (hex.size() < HEX_LEN)
         {
             std::cerr << "Invalid hex: " << hex << '\n';
             return color;
         }
 
-        color.r = HexToDec(hex.substr(1, 2));
-        color.g = HexToDec(hex.substr(3, 2));
-        color.b = HexToDec(hex.substr(5, 2));
+        constexpr int R_OFFSET = 1;
+        constexpr int G_OFFSET = 3;
+        constexpr int B_OFFSET = 5;
+        constexpr int COLOR_LEN = 2;
+
+        color.r = HexToDec(hex.substr(R_OFFSET, COLOR_LEN));
+        color.g = HexToDec(hex.substr(G_OFFSET, COLOR_LEN));
+        color.b = HexToDec(hex.substr(B_OFFSET, COLOR_LEN));
         return color;
     }
 };
@@ -69,8 +78,14 @@ template <> struct std::hash<Point>
     }
 };
 
-static std::vector<Point> GetBorderPoints(const std::vector<Point>& points, int stepSize,
-                                          int approxStepSize)
+struct BorderPointsOptions
+{
+    int stepSize;
+    int approxStepSize;
+};
+
+static std::vector<Point> GetBorderPoints(const std::vector<Point>& points,
+                                          BorderPointsOptions options)
 {
     if (points.empty()) return {};
 
@@ -83,27 +98,30 @@ static std::vector<Point> GetBorderPoints(const std::vector<Point>& points, int 
         startPoint = std::min(startPoint, p);
     }
 
-    const int DIRS_SIZE = 8;
-    Point dirs[DIRS_SIZE] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
+    constexpr int DIRS_LEN = 8;
+    Point dirs[] = {{0, -1}, {1, -1}, {1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}};
 
     // Extract border points using a wall follower algorithm
     std::vector<Point> borderPoints;
     Point currentPoint = startPoint;
-    int backtrackDir = 7;
+    constexpr int START_BACKTRACK = 7;
+    constexpr int BACKTRACK_OFFSET = 5;
+    int backtrackDir = START_BACKTRACK;
     do
     {
-        borderPoints.push_back({currentPoint.x * stepSize, currentPoint.y * stepSize});
+        borderPoints.push_back(
+            {currentPoint.x * options.stepSize, currentPoint.y * options.stepSize});
 
         bool foundNext = false;
-        for (int i = 0; i < DIRS_SIZE; i++)
+        for (int i = 0; i < DIRS_LEN; i++)
         {
-            int checkIdx = (backtrackDir + i) % DIRS_SIZE;
+            int checkIdx = (backtrackDir + i) % DIRS_LEN;
             Point neighbor = {currentPoint.x + dirs[checkIdx].x, currentPoint.y + dirs[checkIdx].y};
 
             if (pointSet.count(neighbor) > 0)
             {
                 currentPoint = neighbor;
-                backtrackDir = (checkIdx + 5) % DIRS_SIZE;
+                backtrackDir = (checkIdx + BACKTRACK_OFFSET) % DIRS_LEN;
                 foundNext = true;
                 break;
             }
@@ -118,7 +136,7 @@ static std::vector<Point> GetBorderPoints(const std::vector<Point>& points, int 
     // Approximate border points as an optimisation
     std::vector<Point> approxBorderPoints;
     approxBorderPoints.push_back(borderPoints[0]);
-    const int SQR_APPROX = approxStepSize * approxStepSize;
+    const int SQR_APPROX = options.approxStepSize * options.approxStepSize;
     for (size_t i = 1; i < borderPoints.size(); i++)
     {
         Point a = borderPoints[i];
@@ -145,53 +163,65 @@ static void PrintHelp(char* programName)
     printf("-s            Provide the step size (the default value is 5)\n");
 }
 
-int main(int argc, char* argv[])
+constexpr int MAX_COLOR = 255;
+constexpr Color DEFAULT_MASK_COLOR = {MAX_COLOR, MAX_COLOR, MAX_COLOR};
+constexpr int DEFAULT_STEP_SIZE = 5;
+
+static char* g_input = nullptr;
+static char* g_output = nullptr;
+static Color g_maskColor = DEFAULT_MASK_COLOR;
+static int g_stepSize = DEFAULT_STEP_SIZE;
+
+static void ProcessArgs(int argc, char* argv[])
 {
-    const char* input = NULL;
-    const char* output = NULL;
-    Color maskColor = {255, 255, 255};
-    int stepSize = 5;
     for (int i = 1; i < argc; i++)
     {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
         {
             PrintHelp(argv[0]);
-            return 0;
+            exit(0);
         }
         if (strcmp(argv[i], "-i") == 0 && i + 1 < argc)
         {
-            input = argv[i + 1];
+            g_input = argv[i + 1];
             i++;
         }
         if (strcmp(argv[i], "-o") == 0 && i + 1 < argc)
         {
-            output = argv[i + 1];
+            g_output = argv[i + 1];
             i++;
         }
         if (strcmp(argv[i], "-c") == 0 && i + 1 < argc)
         {
-            maskColor = Color::FromHex(argv[i + 1]);
+            g_maskColor = Color::FromHex(argv[i + 1]);
             i++;
         }
         if (strcmp(argv[i], "-s") == 0 && i + 1 < argc)
         {
-            stepSize = atoi(argv[i + 1]);
+            g_stepSize = atoi(argv[i + 1]);
             i++;
         }
     }
-    if (!input)
+}
+
+int main(int argc, char* argv[])
+{
+    ProcessArgs(argc, argv);
+    if (g_input == nullptr)
     {
         PrintHelp(argv[0]);
         return 1;
     }
 
-    fprintf(stderr, "Mask color: %d %d %d\n", maskColor.r, maskColor.g, maskColor.b);
+    fprintf(stderr, "Mask color: %d %d %d\n", g_maskColor.r, g_maskColor.g, g_maskColor.b);
 
-    int w, h, n;
-    unsigned char* data = stbi_load(input, &w, &h, &n, 0);
-    if (!data)
+    int w;
+    int h;
+    int n;
+    unsigned char* data = stbi_load(g_input, &w, &h, &n, 0);
+    if (data == nullptr)
     {
-        fprintf(stderr, "Error: failed to open file %s!\n", input);
+        fprintf(stderr, "Error: failed to open file %s!\n", g_input);
         return 1;
     }
     fprintf(stderr, "There are %d channels in the file\n", n);
@@ -201,38 +231,39 @@ int main(int argc, char* argv[])
     {
         for (int x = 0; x < w; x++)
         {
-            unsigned char* pixel = data + (y * w + x) * n;
-            if (Color{pixel[0], pixel[1], pixel[2]} == maskColor)
+            unsigned char* pixel = data + static_cast<ptrdiff_t>((y * w + x) * n);
+            if (Color{pixel[0], pixel[1], pixel[2]} == g_maskColor)
             {
                 points.push_back({x, y});
 
-                if (output)
+                if (g_output != nullptr)
                 {
-                    pixel[0] = 255;
+                    pixel[0] = MAX_COLOR;
                     pixel[1] = 0;
                     pixel[2] = 0;
                 }
             }
         }
     }
-    auto borderPoints = GetBorderPoints(points, 1, stepSize);
+
+    auto borderPoints = GetBorderPoints(points, {1, g_stepSize});
     fprintf(stderr, "Found %zu border points\n", borderPoints.size());
     for (auto& point: borderPoints)
     {
-        if (output)
+        if (g_output != nullptr)
         {
-            unsigned char* pixel = data + (point.y * w + point.x) * n;
+            unsigned char* pixel = data + static_cast<ptrdiff_t>((point.y * w + point.x) * n);
             pixel[0] = 0;
             pixel[1] = 0;
-            pixel[2] = 255;
+            pixel[2] = MAX_COLOR;
         }
 
         printf("%d,%d,", point.x, point.y);
     }
 
-    if (output)
+    if (g_output != nullptr)
     {
-        std::ofstream file(std::string(output) + ".ppm");
+        std::ofstream file(std::string(g_output) + ".ppm");
         file << "P3\n" << w << ' ' << h << "\n255\n";
         for (int y = 0; y < h; y++)
         {

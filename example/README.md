@@ -8,9 +8,9 @@
 
 ![Mask](frog_mask.png)
 
-## Output: (converted to png)
+## out.ppm: (converted to png)
 
-![Output (converted to png)](out.png)
+![out.ppm (converted to png)](out.png)
 
 ## Points:
 
